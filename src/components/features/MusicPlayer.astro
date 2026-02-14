@@ -274,6 +274,10 @@ const widgetId =
             volumeInitialized: false,
             controllerId: null,
             lrcOpen: false,
+            playlistCache: {},
+            lyricCache: {},
+            lyricPending: {},
+            failedCoverUrls: {},
         };
     }
 
@@ -315,7 +319,8 @@ const widgetId =
         lyrics: [], // Parsed lyrics: {time: seconds, text: string}
         currentLrcIndex: -1,
         isUserScrolling: false,
-        scrollTimeout: null
+        scrollTimeout: null,
+        progressRafId: null,
     };
 
     // Initialize state from config
@@ -374,6 +379,49 @@ const widgetId =
                 ...payload,
             }
         }));
+    }
+
+    function getMetingCacheKey() {
+        if (!config.meting) return '';
+        const { api, server, type, id, auth, fallbackApis } = config.meting;
+        return JSON.stringify({
+            api,
+            server,
+            type,
+            id,
+            auth: auth || '',
+            fallbackApis: fallbackApis || [],
+        });
+    }
+
+    function getLyricText(lrcPath) {
+        const lrcUrl = normalizeUrl(lrcPath);
+        if (!lrcUrl) {
+            return Promise.reject(new Error('Invalid lyric url'));
+        }
+
+        if (typeof hub.lyricCache[lrcUrl] === 'string') {
+            return Promise.resolve(hub.lyricCache[lrcUrl]);
+        }
+
+        if (!hub.lyricPending[lrcUrl]) {
+            hub.lyricPending[lrcUrl] = fetch(lrcPath)
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error(`Failed to fetch lyric: ${res.status}`);
+                    }
+                    return res.text();
+                })
+                .then((text) => {
+                    hub.lyricCache[lrcUrl] = text;
+                    return text;
+                })
+                .finally(() => {
+                    delete hub.lyricPending[lrcUrl];
+                });
+        }
+
+        return hub.lyricPending[lrcUrl];
     }
 
     function parseLRC(lrc) {
@@ -545,6 +593,11 @@ const widgetId =
         if (!config.meting) return [];
         const { api, server, type, id, auth, fallbackApis } = config.meting;
 
+        const cacheKey = getMetingCacheKey();
+        if (cacheKey && Array.isArray(hub.playlistCache[cacheKey])) {
+            return hub.playlistCache[cacheKey];
+        }
+
         const apis = [api, ...(fallbackApis || [])];
 
         for (const baseApi of apis) {
@@ -558,13 +611,17 @@ const widgetId =
                 const data = await res.json();
 
                 if (Array.isArray(data) && data.length > 0) {
-                    return data.map(item => ({
+                    const playlist = data.map((item) => ({
                         name: item.title || item.name || 'Unknown',
                         artist: item.author || item.artist || 'Unknown',
                         url: item.url,
                         pic: item.pic || item.cover || '',
                         lrc: item.lrc
                     }));
+                    if (cacheKey) {
+                        hub.playlistCache[cacheKey] = playlist;
+                    }
+                    return playlist;
                 }
             } catch (e) {
                 console.warn(`Meting API fetch failed for ${baseApi}`, e);
@@ -619,14 +676,21 @@ const widgetId =
         if (track.pic) {
             const nextCover = normalizeUrl(track.pic);
             const currentCover = normalizeUrl(ui.cover.currentSrc || ui.cover.src || ui.cover.getAttribute('src') || '');
-            if (nextCover !== currentCover) {
+            const hasCoverError = Boolean(hub.failedCoverUrls[nextCover]);
+
+            if (!hasCoverError && nextCover !== currentCover) {
                 ui.cover.classList.add('opacity-0');
                 ui.cover.src = track.pic;
             }
+
+            if (hasCoverError && ui.cover.getAttribute('src')) {
+                ui.cover.removeAttribute('src');
+            }
+
             ui.cover.alt = `${track.name} - ${track.artist}`;
         } else {
             if (ui.cover.getAttribute('src')) {
-                ui.cover.src = '';
+                ui.cover.removeAttribute('src');
             }
             ui.cover.classList.add('opacity-0');
             ui.cover.alt = config.i18n.noCover;
@@ -669,9 +733,8 @@ const widgetId =
                 || /\.(lrc|txt)(\?|#|$)/i.test(track.lrc);
 
             if (isLrcUrl) {
-                fetch(track.lrc)
-                    .then(res => res.text())
-                    .then(text => renderLyrics(text))
+                getLyricText(track.lrc)
+                    .then((text) => renderLyrics(text))
                     .catch(() => {
                         ui.lrcContainer.innerHTML = `<div class="text-neutral-400 text-sm py-10">${config.i18n.failedLyrics}</div>`;
                     });
@@ -937,40 +1000,113 @@ const widgetId =
         }, 3000); // Wait for 3 seconds of no activity
     }
 
-    ui.cover.addEventListener('load', () => {
+    let isCleanedUp = false;
+
+    function cleanup() {
+        if (isCleanedUp) return;
+        isCleanedUp = true;
+
+        clearTimeout(state.scrollTimeout);
+        if (state.progressRafId) {
+            cancelAnimationFrame(state.progressRafId);
+            state.progressRafId = null;
+        }
+
+        ui.cover.removeEventListener('load', onCoverLoad);
+        ui.cover.removeEventListener('error', onCoverError);
+
+        ui.audio.removeEventListener('timeupdate', onAudioTimeUpdate);
+        ui.audio.removeEventListener('ended', onAudioEnded);
+        ui.audio.removeEventListener('error', onAudioError);
+        ui.audio.removeEventListener('play', onAudioPlay);
+        ui.audio.removeEventListener('pause', onAudioPause);
+        ui.audio.removeEventListener('volumechange', onAudioVolumeChange);
+
+        window.removeEventListener(SYNC_EVENT, onSyncEvent);
+        window.removeEventListener('swup:willReplaceContent', cleanup);
+        document.removeEventListener('astro:before-swap', cleanup);
+        window.removeEventListener('pagehide', cleanup);
+
+        if (hub.controllerId === widgetId) {
+            hub.controllerId = null;
+        }
+    }
+
+    function onCoverLoad() {
         ui.cover.classList.remove('opacity-0');
-    });
-    ui.cover.addEventListener('error', () => {
+    }
+
+    function onCoverError() {
+        const failedCover = normalizeUrl(ui.cover.currentSrc || ui.cover.src || ui.cover.getAttribute('src') || '');
+        if (failedCover) {
+            hub.failedCoverUrls[failedCover] = true;
+        }
         ui.cover.classList.add('opacity-0');
-    });
+    }
 
-    ui.audio.addEventListener('timeupdate', () => {
-        syncProgressUI();
-    });
+    function onAudioTimeUpdate() {
+        if (!ui.widget.isConnected) {
+            cleanup();
+            return;
+        }
 
-    ui.audio.addEventListener('ended', () => {
-        if (!ui.widget.isConnected) return;
+        if (state.progressRafId) return;
+        state.progressRafId = requestAnimationFrame(() => {
+            state.progressRafId = null;
+            if (!ui.widget.isConnected) {
+                cleanup();
+                return;
+            }
+            syncProgressUI();
+        });
+    }
+
+    function onAudioEnded() {
+        if (!ui.widget.isConnected) {
+            cleanup();
+            return;
+        }
         if (!ensureController()) return;
         playNext(true);
-    });
-    ui.audio.addEventListener('error', () => { /* Handle error */ });
-    ui.audio.addEventListener('play', () => updatePlayState(true));
-    ui.audio.addEventListener('pause', () => updatePlayState(false));
-    ui.audio.addEventListener('volumechange', () => {
+    }
+
+    function onAudioError() {
+        if (!ui.widget.isConnected) {
+            cleanup();
+        }
+    }
+
+    function onAudioPlay() {
+        if (!ui.widget.isConnected) {
+            cleanup();
+            return;
+        }
+        updatePlayState(true);
+    }
+
+    function onAudioPause() {
+        if (!ui.widget.isConnected) {
+            cleanup();
+            return;
+        }
+        updatePlayState(false);
+    }
+
+    function onAudioVolumeChange() {
+        if (!ui.widget.isConnected) {
+            cleanup();
+            return;
+        }
         syncVolumeStateFromAudio();
         localStorage.setItem('music-player-volume', ui.audio.volume.toString());
-    });
+    }
 
-    // Seek
-    ui.progressContainer.addEventListener('click', (e) => {
-        if (!ui.audio.duration) return;
-        const rect = ui.progressContainer.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const percent = Math.min(Math.max(clickX / rect.width, 0), 1);
-        ui.audio.currentTime = percent * ui.audio.duration;
-    });
+    function onSyncEvent(e) {
+        if (!ui.widget.isConnected) {
+            cleanup();
+            return;
+        }
 
-    window.addEventListener(SYNC_EVENT, (e) => {
         const detail = e?.detail;
         if (!detail || detail.sourceId === widgetId) return;
 
@@ -984,7 +1120,30 @@ const widgetId =
         } else if (detail.type === 'lyrics' && typeof detail.open === 'boolean') {
             setLyricsDrawerOpen(detail.open, { syncHub: true, emit: false });
         }
+    }
+
+    ui.cover.addEventListener('load', onCoverLoad);
+    ui.cover.addEventListener('error', onCoverError);
+    ui.audio.addEventListener('timeupdate', onAudioTimeUpdate);
+    ui.audio.addEventListener('ended', onAudioEnded);
+    ui.audio.addEventListener('error', onAudioError);
+    ui.audio.addEventListener('play', onAudioPlay);
+    ui.audio.addEventListener('pause', onAudioPause);
+    ui.audio.addEventListener('volumechange', onAudioVolumeChange);
+
+    // Seek
+    ui.progressContainer.addEventListener('click', (e) => {
+        if (!ui.audio.duration) return;
+        const rect = ui.progressContainer.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percent = Math.min(Math.max(clickX / rect.width, 0), 1);
+        ui.audio.currentTime = percent * ui.audio.duration;
     });
+
+    window.addEventListener(SYNC_EVENT, onSyncEvent);
+    window.addEventListener('swup:willReplaceContent', cleanup, { once: true });
+    document.addEventListener('astro:before-swap', cleanup, { once: true });
+    window.addEventListener('pagehide', cleanup, { once: true });
 
     init();
 })();
