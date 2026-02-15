@@ -215,7 +215,7 @@ const widgetId =
 (function () {
     const config = JSON.parse(playerConfigStr);
     const widget = document.getElementById(widgetId);
-
+    
     // If widget not found (e.g. removed), stop
     if (!widget) return;
 
@@ -312,8 +312,8 @@ const widgetId =
         isPlaying: false,
         isLoading: false,
         playMode: 0, // 0: List, 1: One, 2: Rand
-        lastVolume: localStorage.getItem('music-player-volume') !== null
-            ? parseFloat(localStorage.getItem('music-player-volume'))
+        lastVolume: localStorage.getItem('music-player-volume') !== null 
+            ? parseFloat(localStorage.getItem('music-player-volume')) 
             : (config.volume ?? 0.7),
         isMuted: false,
         lyrics: [], // Parsed lyrics: {time: seconds, text: string}
@@ -325,11 +325,11 @@ const widgetId =
 
     // Initialize state from config
     if (config.playMode === 'random') {
-        state.playMode = 2; // Rand
+            state.playMode = 2; // Rand
     } else if (config.playMode === 'one') {
-        state.playMode = 1; // One
+            state.playMode = 1; // One
     } else {
-        state.playMode = 0; // List (default)
+            state.playMode = 0; // List (default)
     }
 
     if (typeof hub.playMode === 'number') {
@@ -429,7 +429,7 @@ const widgetId =
         const lines = lrc.split('\n');
         const result = [];
         const timeReg = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g;
-
+        
         lines.forEach(line => {
             const matches = Array.from(line.matchAll(timeReg));
             if (matches.length > 0) {
@@ -451,7 +451,7 @@ const widgetId =
     function renderLyrics(lrcText) {
         state.lyrics = parseLRC(lrcText);
         ui.lrcContainer.innerHTML = '';
-
+        
         if (state.lyrics.length === 0) {
             ui.lrcContainer.innerHTML = `<div class="text-neutral-400 text-sm py-10" role="option">${config.i18n.noLyrics}</div>`;
             return;
@@ -487,17 +487,17 @@ const widgetId =
 
         // Always update UI classes when index changes
         if (index !== state.currentLrcIndex) {
-            const lines = ui.lrcContainer.querySelectorAll('.lrc-line');
-            lines.forEach((line, i) => {
-                if (i === index) {
-                    line.classList.add('text-[var(--primary)]', 'font-bold', 'text-base');
-                    line.classList.remove('text-neutral-400', 'text-sm');
-                } else {
-                    line.classList.remove('text-[var(--primary)]', 'font-bold', 'text-base');
-                    line.classList.add('text-neutral-400', 'text-sm');
-                }
-            });
-            state.currentLrcIndex = index;
+                const lines = ui.lrcContainer.querySelectorAll('.lrc-line');
+                lines.forEach((line, i) => {
+                    if (i === index) {
+                        line.classList.add('text-[var(--primary)]', 'font-bold', 'text-base');
+                        line.classList.remove('text-neutral-400', 'text-sm');
+                    } else {
+                        line.classList.remove('text-[var(--primary)]', 'font-bold', 'text-base');
+                        line.classList.add('text-neutral-400', 'text-sm');
+                    }
+                });
+                state.currentLrcIndex = index;
         }
 
         // Handle scrolling separately so it can be forced even if index hasn't changed
@@ -508,9 +508,9 @@ const widgetId =
                 // Use line.offsetTop relative to its offsetParent (the container with relative)
                 const lineOffset = line.offsetTop;
                 const lineHeight = line.offsetHeight;
-
+                
                 const targetScroll = lineOffset - (containerHeight / 2) + (lineHeight / 2);
-
+                
                 ui.lrcContainer.scrollTo({
                     top: targetScroll,
                     behavior: forceScroll ? 'auto' : 'smooth'
@@ -569,11 +569,11 @@ const widgetId =
                     loadTrack(existingIndex, false, { syncAudio: false, emit: false });
                     syncProgressUI();
                 } else {
-                    let startIndex = 0;
-                    if (state.playMode === 2) {
-                        startIndex = Math.floor(Math.random() * state.playlist.length);
-                    }
-
+                let startIndex = 0;
+                if (state.playMode === 2) {
+                    startIndex = Math.floor(Math.random() * state.playlist.length);
+                }
+                
                     loadTrack(startIndex, false, { syncAudio: true, emit: true });
                 }
 
@@ -597,9 +597,9 @@ const widgetId =
         if (cacheKey && Array.isArray(hub.playlistCache[cacheKey])) {
             return hub.playlistCache[cacheKey];
         }
-
+        
         const apis = [api, ...(fallbackApis || [])];
-
+        
         for (const baseApi of apis) {
             if (!baseApi) continue;
             try {
@@ -609,7 +609,7 @@ const widgetId =
                 const res = await fetch(fetchUrl);
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 const data = await res.json();
-
+                
                 if (Array.isArray(data) && data.length > 0) {
                     const playlist = data.map((item) => ({
                         name: item.title || item.name || 'Unknown',
@@ -638,12 +638,12 @@ const widgetId =
             const img = clone.querySelector('.item-cover');
             const title = clone.querySelector('.item-title');
             const artist = clone.querySelector('.item-artist');
-
+            
             img.src = track.pic || '';
             img.alt = `${track.name} - ${track.artist}`;
             title.innerText = track.name;
             artist.innerText = track.artist;
-
+            
             // Active State logic handled in updatePlaylistUI
             itemEl.dataset.index = idx;
             itemEl.setAttribute('role', 'option');
@@ -672,15 +672,15 @@ const widgetId =
         ui.title.title = track.name;
         ui.artist.innerText = track.artist;
         ui.artist.title = track.artist;
-
+        
         if (track.pic) {
             const nextCover = normalizeUrl(track.pic);
             const currentCover = normalizeUrl(ui.cover.currentSrc || ui.cover.src || ui.cover.getAttribute('src') || '');
             const hasCoverError = Boolean(hub.failedCoverUrls[nextCover]);
 
             if (!hasCoverError && nextCover !== currentCover) {
-                ui.cover.classList.add('opacity-0');
-                ui.cover.src = track.pic;
+            ui.cover.classList.add('opacity-0');
+            ui.cover.src = track.pic;
             }
 
             if (hasCoverError && ui.cover.getAttribute('src')) {
@@ -695,29 +695,29 @@ const widgetId =
             ui.cover.classList.add('opacity-0');
             ui.cover.alt = config.i18n.noCover;
         }
-
+        
         if (syncAudio) {
             hub.controllerId = widgetId;
             const targetSrc = normalizeUrl(track.url);
             const currentSrc = normalizeUrl(ui.audio.currentSrc || ui.audio.src);
             if (targetSrc !== currentSrc) {
-                ui.audio.src = track.url;
+        ui.audio.src = track.url;
             }
         }
-
+        
         // Reset cover rotation
         ui.cover.classList.remove('animate-spin-slow');
         void ui.cover.offsetWidth;
         ui.cover.classList.add('animate-spin-slow');
         ui.cover.style.animationPlayState = 'paused';
-
+        
         if (syncAudio) {
             // Reset Progress while next metadata is loading
-            ui.progressBar.style.width = '0%';
+        ui.progressBar.style.width = '0%';
             ui.progressThumb.style.left = '0%';
-            ui.progressContainer.setAttribute('aria-valuenow', '0');
-            ui.currentTime.innerText = '0:00';
-            ui.totalTime.innerText = '0:00';
+        ui.progressContainer.setAttribute('aria-valuenow', '0');
+        ui.currentTime.innerText = '0:00';
+        ui.totalTime.innerText = '0:00';
         } else {
             syncProgressUI();
         }
@@ -726,7 +726,7 @@ const widgetId =
         state.lyrics = [];
         state.currentLrcIndex = -1;
         ui.lrcContainer.innerHTML = `<div class="text-neutral-400 text-sm py-10">${config.i18n.loadingLyrics}</div>`;
-
+        
         if (track.lrc) {
             const isLrcUrl = /^(https?:)?\/\//.test(track.lrc)
                 || track.lrc.startsWith('/')
@@ -789,12 +789,12 @@ const widgetId =
 
     function playNext(auto = false) {
         let nextIndex;
-        if (state.playMode === 1 && auto) {
+        if (state.playMode === 1 && auto) { 
             // Single Loop
             ui.audio.currentTime = 0;
             ui.audio.play().catch(e => console.warn(e));
             return;
-        } else if (state.playMode === 2) {
+        } else if (state.playMode === 2) { 
             // Random
             nextIndex = Math.floor(Math.random() * state.playlist.length);
         } else {
@@ -807,67 +807,67 @@ const widgetId =
     function playPrev() {
         let prevIndex = (state.currentIndex - 1 + state.playlist.length) % state.playlist.length;
         if (state.playMode === 2) {
-            prevIndex = Math.floor(Math.random() * state.playlist.length);
+                prevIndex = Math.floor(Math.random() * state.playlist.length);
         }
         loadTrack(prevIndex, true);
     }
 
     function updatePlaylistUI() {
-        const items = ui.playlistContainer.querySelectorAll('.playlist-item');
-        items.forEach(el => {
-            const idx = parseInt(el.dataset.index);
-            const overlay = el.querySelector('.item-active-overlay');
-            const title = el.querySelector('.item-title');
-            if (idx === state.currentIndex) {
-                el.classList.add('bg-neutral-100', 'dark:bg-white/10');
-                el.setAttribute('aria-current', 'true');
-                overlay.classList.remove('hidden');
-                overlay.classList.add('flex');
-                title.classList.add('text-[var(--primary)]');
-            } else {
-                el.classList.remove('bg-neutral-100', 'dark:bg-white/10');
-                el.removeAttribute('aria-current');
-                overlay.classList.add('hidden');
-                overlay.classList.remove('flex');
-                title.classList.remove('text-[var(--primary)]');
-            }
-        });
+            const items = ui.playlistContainer.querySelectorAll('.playlist-item');
+            items.forEach(el => {
+                const idx = parseInt(el.dataset.index);
+                const overlay = el.querySelector('.item-active-overlay');
+                const title = el.querySelector('.item-title');
+                if (idx === state.currentIndex) {
+                    el.classList.add('bg-neutral-100', 'dark:bg-white/10');
+                    el.setAttribute('aria-current', 'true');
+                    overlay.classList.remove('hidden');
+                    overlay.classList.add('flex');
+                    title.classList.add('text-[var(--primary)]');
+                } else {
+                    el.classList.remove('bg-neutral-100', 'dark:bg-white/10');
+                    el.removeAttribute('aria-current');
+                    overlay.classList.add('hidden');
+                    overlay.classList.remove('flex');
+                    title.classList.remove('text-[var(--primary)]');
+                }
+            });
     }
 
     // Mode Logic
     // Mode 0: List (Def), Mode 1: One, Mode 2: Rand
     // Button Repeat: Cycle 0 -> 1 -> 2 -> 0
-
+    
     function updateModeUI() {
         const primaryColor = 'text-[var(--primary)]';
 
         // Always primary color if we want to indicate it's interactable, or conditionally
-        // Usually Loop List is 'inactive' (grey) or 'active' (primary).
+        // Usually Loop List is 'inactive' (grey) or 'active' (primary). 
         // Let's make: List=Grey (default), One=Primary, Rand=Primary
-
+        
         if (state.playMode === 0) {
-            ui.btnRepeat.className = `p-2 active:scale-95 transition-colors text-neutral-300 dark:text-neutral-600 hover:text-[var(--primary)]`;
-            ui.iconRepeat.classList.remove('hidden');
-            ui.iconRepeatOne.classList.add('hidden');
-            ui.iconShuffle.classList.add('hidden');
+                ui.btnRepeat.className = `p-2 active:scale-95 transition-colors text-neutral-300 dark:text-neutral-600 hover:text-[var(--primary)]`;
+                ui.iconRepeat.classList.remove('hidden');
+                ui.iconRepeatOne.classList.add('hidden');
+                ui.iconShuffle.classList.add('hidden');
         } else if (state.playMode === 1) {
-            ui.btnRepeat.className = `p-2 active:scale-95 transition-colors ${primaryColor}`;
-            ui.iconRepeat.classList.add('hidden');
-            ui.iconRepeatOne.classList.remove('hidden');
-            ui.iconShuffle.classList.add('hidden');
+                ui.btnRepeat.className = `p-2 active:scale-95 transition-colors ${primaryColor}`;
+                ui.iconRepeat.classList.add('hidden');
+                ui.iconRepeatOne.classList.remove('hidden');
+                ui.iconShuffle.classList.add('hidden');
         } else {
-            ui.btnRepeat.className = `p-2 active:scale-95 transition-colors ${primaryColor}`;
-            ui.iconRepeat.classList.add('hidden');
-            ui.iconRepeatOne.classList.add('hidden');
-            ui.iconShuffle.classList.remove('hidden');
+                ui.btnRepeat.className = `p-2 active:scale-95 transition-colors ${primaryColor}`;
+                ui.iconRepeat.classList.add('hidden');
+                ui.iconRepeatOne.classList.add('hidden');
+                ui.iconShuffle.classList.remove('hidden');
         }
     }
 
     ui.btnRepeat.addEventListener('click', () => {
-        // Cycle: 0 -> 1 -> 2 -> 0
-        state.playMode = (state.playMode + 1) % 3;
+            // Cycle: 0 -> 1 -> 2 -> 0
+            state.playMode = (state.playMode + 1) % 3;
         hub.playMode = state.playMode;
-        updateModeUI();
+            updateModeUI();
         emitSync('mode', { playMode: state.playMode });
     });
 
@@ -886,7 +886,7 @@ const widgetId =
         const pct = state.isMuted ? 0 : state.lastVolume * 100;
         ui.volBar.style.width = `${pct}%`;
         ui.volContainer.setAttribute('aria-valuenow', Math.round(pct).toString());
-
+        
         if (state.isMuted || state.lastVolume === 0) {
             ui.iconVolHigh.classList.add('hidden');
             ui.iconVolMute.classList.remove('hidden');
@@ -901,14 +901,14 @@ const widgetId =
     });
 
     ui.volContainer.addEventListener('click', (e) => {
-        const rect = ui.volContainer.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        let val = x / rect.width;
-        val = Math.max(0, Math.min(1, val));
-
-        ui.audio.muted = false;
-        ui.audio.volume = val;
-        localStorage.setItem('music-player-volume', val.toString());
+            const rect = ui.volContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            let val = x / rect.width;
+            val = Math.max(0, Math.min(1, val));
+            
+            ui.audio.muted = false;
+            ui.audio.volume = val;
+            localStorage.setItem('music-player-volume', val.toString());
     });
 
     // Drawer Logic
@@ -917,20 +917,20 @@ const widgetId =
         const targetOpen = config.showLyrics ? open : false;
 
         if (targetOpen) {
-            // Close playlist if open
-            ui.playlistDrawer.style.gridTemplateRows = '0fr';
-            ui.playlistDrawer.classList.remove('opacity-100');
-            ui.playlistDrawer.classList.add('opacity-0');
-            ui.btnDrawer.classList.remove('text-[var(--primary)]');
-            ui.btnDrawer.classList.add('text-neutral-400');
+                // Close playlist if open
+                ui.playlistDrawer.style.gridTemplateRows = '0fr';
+                ui.playlistDrawer.classList.remove('opacity-100');
+                ui.playlistDrawer.classList.add('opacity-0');
+                ui.btnDrawer.classList.remove('text-[var(--primary)]');
+                ui.btnDrawer.classList.add('text-neutral-400');
 
-            ui.lrcDrawer.style.gridTemplateRows = '1fr';
-            ui.lrcDrawer.classList.add('opacity-100');
-            ui.lrcDrawer.classList.remove('opacity-0');
-            ui.btnLrc.classList.add('text-[var(--primary)]');
-            ui.btnLrc.classList.remove('text-neutral-400');
-            ui.iconLrcOn.classList.remove('hidden');
-            ui.iconLrcOff.classList.add('hidden');
+                ui.lrcDrawer.style.gridTemplateRows = '1fr';
+                ui.lrcDrawer.classList.add('opacity-100');
+                ui.lrcDrawer.classList.remove('opacity-0');
+                ui.btnLrc.classList.add('text-[var(--primary)]');
+                ui.btnLrc.classList.remove('text-neutral-400');
+                ui.iconLrcOn.classList.remove('hidden');
+                ui.iconLrcOff.classList.add('hidden');
         } else {
             ui.lrcDrawer.style.gridTemplateRows = '0fr';
             ui.lrcDrawer.classList.remove('opacity-100');
@@ -939,7 +939,7 @@ const widgetId =
             ui.btnLrc.classList.add('text-neutral-400');
             ui.iconLrcOn.classList.add('hidden');
             ui.iconLrcOff.classList.remove('hidden');
-        }
+            }
 
         if (syncHub) {
             hub.lrcOpen = targetOpen;
@@ -955,25 +955,25 @@ const widgetId =
     });
 
     ui.btnDrawer.addEventListener('click', () => {
-        const isOpen = ui.playlistDrawer.style.gridTemplateRows === '1fr';
-        if (isOpen) {
-            ui.playlistDrawer.style.gridTemplateRows = '0fr';
-            ui.playlistDrawer.classList.remove('opacity-100');
-            ui.playlistDrawer.classList.add('opacity-0');
-
-            ui.btnDrawer.classList.add('text-neutral-400');
-            ui.btnDrawer.classList.remove('text-[var(--primary)]');
-        } else {
+            const isOpen = ui.playlistDrawer.style.gridTemplateRows === '1fr';
+            if (isOpen) {
+                ui.playlistDrawer.style.gridTemplateRows = '0fr';
+                ui.playlistDrawer.classList.remove('opacity-100');
+                ui.playlistDrawer.classList.add('opacity-0');
+                
+                ui.btnDrawer.classList.add('text-neutral-400');
+                ui.btnDrawer.classList.remove('text-[var(--primary)]');
+            } else {
             // Close lyrics if open and sync this state globally
             setLyricsDrawerOpen(false, { syncHub: true, emit: true });
 
-            ui.playlistDrawer.style.gridTemplateRows = '1fr';
-            ui.playlistDrawer.classList.add('opacity-100');
-            ui.playlistDrawer.classList.remove('opacity-0');
-
-            ui.btnDrawer.classList.remove('text-neutral-400');
-            ui.btnDrawer.classList.add('text-[var(--primary)]');
-        }
+                ui.playlistDrawer.style.gridTemplateRows = '1fr';
+                ui.playlistDrawer.classList.add('opacity-100');
+                ui.playlistDrawer.classList.remove('opacity-0');
+                
+                ui.btnDrawer.classList.remove('text-neutral-400');
+                ui.btnDrawer.classList.add('text-[var(--primary)]');
+            }
     });
 
     setLyricsDrawerOpen(Boolean(hub.lrcOpen), { syncHub: true, emit: false });
@@ -984,12 +984,12 @@ const widgetId =
     ui.btnPrev.addEventListener('click', playPrev);
 
     ui.lrcContainer.addEventListener('wheel', () => {
-        state.isUserScrolling = true;
-        resetScrollTimeout();
+            state.isUserScrolling = true;
+            resetScrollTimeout();
     });
     ui.lrcContainer.addEventListener('touchstart', () => {
-        state.isUserScrolling = true;
-        resetScrollTimeout();
+            state.isUserScrolling = true;
+            resetScrollTimeout();
     });
 
     function resetScrollTimeout() {
@@ -1033,7 +1033,7 @@ const widgetId =
     }
 
     function onCoverLoad() {
-        ui.cover.classList.remove('opacity-0');
+            ui.cover.classList.remove('opacity-0');
     }
 
     function onCoverError() {
@@ -1058,9 +1058,9 @@ const widgetId =
                 return;
             }
             syncProgressUI();
-        });
+    });
     }
-
+    
     function onAudioEnded() {
         if (!ui.widget.isConnected) {
             cleanup();
@@ -1069,13 +1069,13 @@ const widgetId =
         if (!ensureController()) return;
         playNext(true);
     }
-
+            
     function onAudioError() {
         if (!ui.widget.isConnected) {
             cleanup();
         }
     }
-
+            
     function onAudioPlay() {
         if (!ui.widget.isConnected) {
             cleanup();
@@ -1089,8 +1089,8 @@ const widgetId =
             cleanup();
             return;
         }
-        updatePlayState(false);
-    }
+            updatePlayState(false);
+        }
 
     function onAudioVolumeChange() {
         if (!ui.widget.isConnected) {
@@ -1130,7 +1130,7 @@ const widgetId =
     ui.audio.addEventListener('play', onAudioPlay);
     ui.audio.addEventListener('pause', onAudioPause);
     ui.audio.addEventListener('volumechange', onAudioVolumeChange);
-
+    
     // Seek
     ui.progressContainer.addEventListener('click', (e) => {
         if (!ui.audio.duration) return;
