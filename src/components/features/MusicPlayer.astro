@@ -569,11 +569,11 @@ const widgetId =
                     loadTrack(existingIndex, false, { syncAudio: false, emit: false });
                     syncProgressUI();
                 } else {
-                let startIndex = 0;
-                if (state.playMode === 2) {
-                    startIndex = Math.floor(Math.random() * state.playlist.length);
-                }
-                
+                    let startIndex = 0;
+                    if (state.playMode === 2) {
+                        startIndex = Math.floor(Math.random() * state.playlist.length);
+                    }
+
                     loadTrack(startIndex, false, { syncAudio: true, emit: true });
                 }
 
@@ -679,8 +679,8 @@ const widgetId =
             const hasCoverError = Boolean(hub.failedCoverUrls[nextCover]);
 
             if (!hasCoverError && nextCover !== currentCover) {
-            ui.cover.classList.add('opacity-0');
-            ui.cover.src = track.pic;
+                ui.cover.classList.add('opacity-0');
+                ui.cover.src = track.pic;
             }
 
             if (hasCoverError && ui.cover.getAttribute('src')) {
@@ -695,29 +695,29 @@ const widgetId =
             ui.cover.classList.add('opacity-0');
             ui.cover.alt = config.i18n.noCover;
         }
-        
+
         if (syncAudio) {
             hub.controllerId = widgetId;
             const targetSrc = normalizeUrl(track.url);
             const currentSrc = normalizeUrl(ui.audio.currentSrc || ui.audio.src);
             if (targetSrc !== currentSrc) {
-        ui.audio.src = track.url;
+                ui.audio.src = track.url;
             }
         }
-        
+
         // Reset cover rotation
         ui.cover.classList.remove('animate-spin-slow');
         void ui.cover.offsetWidth;
         ui.cover.classList.add('animate-spin-slow');
         ui.cover.style.animationPlayState = 'paused';
-        
+
         if (syncAudio) {
             // Reset Progress while next metadata is loading
-        ui.progressBar.style.width = '0%';
+            ui.progressBar.style.width = '0%';
             ui.progressThumb.style.left = '0%';
-        ui.progressContainer.setAttribute('aria-valuenow', '0');
-        ui.currentTime.innerText = '0:00';
-        ui.totalTime.innerText = '0:00';
+            ui.progressContainer.setAttribute('aria-valuenow', '0');
+            ui.currentTime.innerText = '0:00';
+            ui.totalTime.innerText = '0:00';
         } else {
             syncProgressUI();
         }
