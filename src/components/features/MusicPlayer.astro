@@ -554,7 +554,7 @@ const widgetId =
         setLoading(true);
         try {
             if (config.mode === 'meting' && config.meting) {
-                state.playlist = await fetchMetingData();
+                state.playlist = (await fetchMetingData()) || [];
             } else if (config.mode === 'local') {
                 state.playlist = config.localPlaylist || [];
             }
@@ -582,7 +582,7 @@ const widgetId =
                 ui.title.innerText = config.i18n.noSongs;
             }
         } catch (e) {
-            console.error('Music Init Error', e);
+            console.error("Music Init Error", e);
             ui.title.innerText = config.i18n.error;
         } finally {
             setLoading(false);
@@ -590,7 +590,7 @@ const widgetId =
     }
 
     async function fetchMetingData() {
-        if (!config.meting) return [];
+        if (!config.meting) return;
         const { api, server, type, id, auth, fallbackApis } = config.meting;
 
         const cacheKey = getMetingCacheKey();
@@ -627,7 +627,7 @@ const widgetId =
                 console.warn(`Meting API fetch failed for ${baseApi}`, e);
             }
         }
-        throw new Error('All Meting APIs failed');
+        throw new Error("All Meting APIs failed");
     }
 
     function renderPlaylist() {
